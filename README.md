@@ -66,3 +66,4 @@ Basta trocar essas listas por chamadas à sua API/Supabase — os getters (`iten
   em outro projeto, o padrão de roles pode ser reaproveitado aqui).
 - Persistir componentes/movimentações no Postgres/Supabase em vez do estado em memória.
 - Adicionar paginação/servidor na tabela do catálogo quando o volume de itens crescer.
+# vulcano-app
