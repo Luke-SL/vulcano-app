@@ -1,1 +1,77 @@
-// app global css
+// Vulcano — estilos globais
+
+:root {
+  --v-bg: #0D0B0C;
+  --v-surface: #17130F;
+  --v-surface-alt: #1D1712;
+  --v-border: #2C221C;
+  --v-text: #F5EFE9;
+  --v-text-muted: #9C918C;
+  --v-magma: #FF5A1F;
+  --v-magma-dim: rgba(255, 90, 31, 0.14);
+  --v-brasa: #E63946;
+  --v-brasa-dim: rgba(230, 57, 70, 0.14);
+  --v-ambar: #F2A93B;
+  --v-ambar-dim: rgba(242, 169, 59, 0.14);
+  --v-verde: #4CAF7D;
+  --v-verde-dim: rgba(76, 175, 125, 0.14);
+}
+
+body {
+  background: var(--v-bg);
+  color: var(--v-text);
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.font-mono {
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.v-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--v-text-muted);
+}
+
+.v-surface {
+  background: var(--v-surface);
+  border: 1px solid var(--v-border);
+  border-radius: 10px;
+}
+
+.v-surface-alt {
+  background: var(--v-surface-alt);
+  border: 1px solid var(--v-border);
+  border-radius: 10px;
+}
+
+.v-chip {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  padding: 3px 10px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.v-chip--normal   { background: var(--v-verde-dim);  color: var(--v-verde); }
+.v-chip--baixo    { background: var(--v-ambar-dim);  color: var(--v-ambar); }
+.v-chip--critico  { background: var(--v-brasa-dim);  color: var(--v-brasa); }
+
+.v-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+.v-scrollbar::-webkit-scrollbar-thumb { background: var(--v-border); border-radius: 3px; }
+
+// remove sombras genéricas de card do Quasar, usamos bordas
+.q-card {
+  box-shadow: none;
+}
+
+// input focus visível (acessibilidade)
+.q-field--focused .q-field__control {
+  box-shadow: 0 0 0 2px var(--v-magma-dim);
+}

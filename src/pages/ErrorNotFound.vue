@@ -1,21 +1,14 @@
 <template>
-  <div
-    class="fullscreen bg-blue text-white text-center q-pa-md flex flex-center"
-  >
-    <div>
-      <div style="font-size: 30vh"> 404 </div>
-
-      <div class="text-h2" style="opacity: 0.4"> Oops. Nothing here... </div>
-
-      <q-btn
-        class="q-mt-xl"
-        color="white"
-        text-color="blue"
-        unelevated
-        to="/"
-        label="Go Home"
-        no-caps
-      />
-    </div>
-  </div>
+  <q-layout>
+    <q-page-container>
+      <q-page class="flex flex-center column" style="background: var(--v-bg);">
+        <div class="text-h1 font-mono" style="color: var(--v-magma);">404</div>
+        <div class="text-subtitle1 q-mt-sm" style="color: var(--v-text-muted);">Página não encontrada</div>
+        <q-btn no-caps unelevated color="primary" label="Voltar ao dashboard" class="q-mt-lg" to="/dashboard" />
+      </q-page>
+    </q-page-container>
+  </q-layout>
 </template>
+
+<script setup>
+</script>

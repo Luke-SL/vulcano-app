@@ -1,41 +1,28 @@
 {
-  "name": "vulcano-app",
-  "version": "0.0.1",
+  "name": "vulcano",
+  "version": "1.0.0",
+  "description": "Vulcano — Controle de entrada e saída de componentes eletrônicos",
+  "productName": "Vulcano",
   "private": true,
-  "description": "A Quasar Project",
-  "keywords": [
-    "quasar",
-    "quasar-app",
-    "quasar-app-vite",
-    "quasar-cli",
-    "vite",
-    "vue",
-    "vuejs"
-  ],
-  "author": "Lucas <lukeedward2022@gmail.com>",
-  "type": "module",
   "scripts": {
-    "lint": "oxfmt && oxlint --fix",
-    "lint:check": "oxfmt --check && oxlint",
     "dev": "quasar dev",
     "build": "quasar build",
-    "postinstall": "quasar prepare --silent"
+    "lint": "eslint --ext .js,.vue src"
   },
   "dependencies": {
-    "@quasar/extras": "^2.0.4",
-    "quasar": "^2.31.0",
-    "vue": "^3.5.22",
-    "vue-router": "^5.0.6"
+    "@quasar/extras": "^1.16.9",
+    "@supabase/supabase-js": "^2.45.0",
+    "quasar": "^2.16.0",
+    "vue": "^3.4.18",
+    "vue-router": "^4.3.0"
   },
   "devDependencies": {
-    "@quasar/app-vite": "^3.8.3",
-    "autoprefixer": "^10.4.27",
-    "oxfmt": "^0.x",
-    "oxlint": "^1.x",
-    "postcss": "^8.5.8"
+    "@quasar/app-vite": "^1.9.0",
+    "autoprefixer": "^10.4.19",
+    "eslint": "^8.57.0",
+    "postcss": "^8.4.38"
   },
   "engines": {
-    "node": ">= 26 || ^24 || ^22.12"
-  },
-  "productName": "Vulcano App"
+    "node": "^18 || ^20 || ^22 || ^24"
+  }
 }

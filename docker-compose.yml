@@ -1,0 +1,18 @@
+# Uso:
+#   1. Garanta que o .env (na raiz do projeto) tem VITE_SUPABASE_URL e
+#      VITE_SUPABASE_ANON_KEY preenchidos.
+#   2. docker compose up --build
+#   3. Acesse http://localhost:8080
+#
+# Se trocar os valores no .env, precisa rodar "docker compose build --no-cache"
+# de novo — são embutidos no build, não lidos em runtime.
+
+services:
+  vulcano:
+    build:
+      context: .
+      args:
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
+        VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
+    ports:
+      - "8080:80"

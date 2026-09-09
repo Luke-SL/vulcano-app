@@ -1,18 +1,24 @@
 const routes = [
   {
+    path: '/login',
+    component: () => import('pages/LoginPage.vue')
+  },
+  {
     path: '/',
-    component: () => import('@/layouts/MainLayout.vue'),
+    component: () => import('layouts/MainLayout.vue'),
+    meta: { requiresAuth: true },
     children: [
-      { path: '', component: () => import('@/pages/IndexPage.vue') },
-      { path: 'second', component: () => import('@/pages/SecondPage.vue') }
+      { path: '', redirect: '/dashboard' },
+      { path: 'dashboard', name: 'dashboard', component: () => import('pages/DashboardPage.vue') },
+      { path: 'catalogo', name: 'catalogo', component: () => import('pages/CatalogoPage.vue') },
+      { path: 'entrada', name: 'entrada', component: () => import('pages/EntradaEstoquePage.vue') },
+      { path: 'saida', name: 'saida', component: () => import('pages/SaidaEstoquePage.vue') },
+      { path: 'relatorios', name: 'relatorios', component: () => import('pages/RelatoriosPage.vue') }
     ]
   },
-
-  // Always leave this as last one,
-  // but you can also remove it
   {
     path: '/:catchAll(.*)*',
-    component: () => import('@/pages/ErrorNotFound.vue')
+    component: () => import('pages/ErrorNotFound.vue')
   }
 ]
 
