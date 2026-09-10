@@ -26,7 +26,7 @@
 
       <div class="row q-gutter-xs">
         <q-btn
-          v-for="cat in ['Todos', ...(categorias || []).map((c) => c.nome)]"
+          v-for="cat in ['Todos', ...estoque.categorias.map((c) => c.nome)]"
           :key="cat"
           :unelevated="categoriaAtiva === cat"
           :flat="categoriaAtiva !== cat"
@@ -78,21 +78,18 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useEstoque } from 'src/composables/useEstoque'
+import { useRoute } from 'vue-router'
+import { useEstoque } from '/src/composables/useEstoque'
 
-const {
-  categorias,
-  itensComStatus,
-  carregarCategorias,
-  carregarComponentes
-} = useEstoque()
+const estoque = useEstoque()
+const route = useRoute()
 
 onMounted(() => {
-  carregarCategorias()
-  carregarComponentes()
+  estoque.carregarCategorias()
+  estoque.carregarComponentes()
 })
 
-const busca = ref('')
+const busca = ref(typeof route.query.busca === 'string' ? route.query.busca : '')
 const categoriaAtiva = ref('Todos')
 
 const colunas = [
@@ -106,8 +103,7 @@ const colunas = [
 ]
 
 const itensFiltrados = computed(() => {
-  const lista = itensComStatus.value || []
-  return lista.filter((item) => {
+  return estoque.itensComStatus.filter((item) => {
     const bateCategoria = categoriaAtiva.value === 'Todos' || item.categoria === categoriaAtiva.value
     const bateBusca = !busca.value ||
       item.nome.toLowerCase().includes(busca.value.toLowerCase()) ||

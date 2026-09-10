@@ -13,7 +13,9 @@ const routes = [
       { path: 'catalogo', name: 'catalogo', component: () => import('pages/CatalogoPage.vue') },
       { path: 'entrada', name: 'entrada', component: () => import('pages/EntradaEstoquePage.vue') },
       { path: 'saida', name: 'saida', component: () => import('pages/SaidaEstoquePage.vue') },
-      { path: 'relatorios', name: 'relatorios', component: () => import('pages/RelatoriosPage.vue') }
+      { path: 'relatorios', name: 'relatorios', component: () => import('pages/RelatoriosPage.vue') },
+      { path: 'movimentacoes', name: 'movimentacoes', component: () => import('pages/MovimentacoesPage.vue') },
+{ path: 'movimentacoes/:id', name: 'movimentacao-detalhe', component: () => import('pages/MovimentacaoDetalhePage.vue'), props: true },
     ]
   },
   {

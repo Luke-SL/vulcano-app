@@ -87,7 +87,8 @@ const menu = [
   { label: 'Catálogo', icon: 'inventory_2', to: '/catalogo' },
   { label: 'Entrada de Estoque', icon: 'add_circle_outline', to: '/entrada' },
   { label: 'Saída de Estoque', icon: 'remove_circle_outline', to: '/saida' },
-  { label: 'Relatórios', icon: 'bar_chart', to: '/relatorios' }
+  { label: 'Relatórios', icon: 'bar_chart', to: '/relatorios' },
+  { label: 'Movimentações', icon: 'history', to: '/movimentacoes' },
 ]
 
 const iniciais = computed(() => {

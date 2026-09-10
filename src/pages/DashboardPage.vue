@@ -18,11 +18,11 @@
             <q-icon name="inventory_2" size="18px" style="color: var(--v-magma);" />
           </div>
           <div class="row items-baseline q-mt-sm" style="gap: 6px;">
-            <div class="text-h4 text-weight-medium font-mono">{{ format(estoque.totalUnidades.value) }}</div>
+            <div class="text-h4 text-weight-medium font-mono">{{ format(estoque.totalUnidades) }}</div>
             <div class="text-caption" style="color: var(--v-text-muted);">unidades</div>
           </div>
           <div class="text-caption q-mt-xs" style="color: var(--v-verde);">
-            Distribuídas em {{ estoque.categorias.value.length }} categorias
+            Distribuídas em {{ estoque.categorias.length }} categorias
           </div>
         </div>
       </div>
@@ -34,7 +34,7 @@
             <q-icon name="warning_amber" size="18px" style="color: var(--v-ambar);" />
           </div>
           <div class="row items-baseline q-mt-sm" style="gap: 6px;">
-            <div class="text-h4 text-weight-medium font-mono">{{ estoque.itensEstoqueBaixo.value.length }}</div>
+            <div class="text-h4 text-weight-medium font-mono">{{ estoque.itensEstoqueBaixo.length }}</div>
             <div class="text-caption" style="color: var(--v-text-muted);">itens</div>
           </div>
           <div class="text-caption q-mt-xs" style="color: var(--v-text-muted);">
@@ -50,7 +50,7 @@
             <q-icon name="south_west" size="18px" style="color: var(--v-verde);" />
           </div>
           <div class="row items-baseline q-mt-sm" style="gap: 6px;">
-            <div class="text-h4 text-weight-medium font-mono">{{ format(estoque.entradasHoje.value) }}</div>
+            <div class="text-h4 text-weight-medium font-mono">{{ format(estoque.entradasHoje) }}</div>
             <div class="text-caption" style="color: var(--v-text-muted);">unidades</div>
           </div>
           <div class="text-caption q-mt-xs" style="color: var(--v-text-muted);">
@@ -66,7 +66,7 @@
             <q-icon name="north_east" size="18px" style="color: var(--v-brasa);" />
           </div>
           <div class="row items-baseline q-mt-sm" style="gap: 6px;">
-            <div class="text-h4 text-weight-medium font-mono">{{ format(estoque.saidasHoje.value) }}</div>
+            <div class="text-h4 text-weight-medium font-mono">{{ format(estoque.saidasHoje) }}</div>
             <div class="text-caption" style="color: var(--v-text-muted);">unidades</div>
           </div>
           <div class="text-caption q-mt-xs" style="color: var(--v-text-muted);">
@@ -89,7 +89,7 @@
           </div>
 
           <div class="chart-bars">
-            <div v-for="mes in estoque.movimentacaoMensal.value" :key="mes.mes" class="chart-col">
+            <div v-for="mes in estoque.movimentacaoMensal" :key="mes.mes" class="chart-col">
               <div class="chart-bar-group">
                 <div class="chart-bar" :style="{ height: barHeight(mes.entradas) + 'px', background: 'var(--v-magma)' }" />
                 <div class="chart-bar" :style="{ height: barHeight(mes.saidas) + 'px', background: 'var(--v-brasa)' }" />
@@ -104,7 +104,7 @@
           <q-table
             flat
             dense
-            :rows="estoque.movimentacoesRecentes.value"
+            :rows="estoque.movimentacoesRecentes"
             :columns="colunasMovimentacoes"
             row-key="codigo"
             hide-bottom
@@ -138,12 +138,12 @@
         <div class="v-surface q-pa-md full-height">
           <div class="text-subtitle2 text-weight-medium q-mb-md">Alertas de estoque</div>
 
-          <div v-if="estoque.alertas.value.length === 0" class="text-body2" style="color: var(--v-text-muted);">
+          <div v-if="estoque.alertas.length === 0" class="text-body2" style="color: var(--v-text-muted);">
             Nenhum alerta no momento.
           </div>
 
           <div
-            v-for="item in estoque.alertas.value"
+            v-for="item in estoque.alertas"
             :key="item.codigo"
             class="alerta-item q-mb-sm"
           >
@@ -184,7 +184,7 @@ const colunasMovimentacoes = [
 ]
 
 const maiorValor = computed(() => {
-  const lista = estoque.movimentacaoMensal.value || []
+  const lista = estoque.movimentacaoMensal || []
   const valores = lista.flatMap((m) => [m.entradas, m.saidas])
   return valores.length ? Math.max(...valores, 1) : 1
 })

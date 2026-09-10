@@ -8,8 +8,14 @@
         </div>
       </div>
       <div class="row q-gutter-sm">
-        <q-btn no-caps flat icon="description" label="Exportar PDF" @click="exportar('PDF')" />
-        <q-btn no-caps unelevated color="primary" icon="grid_on" label="Exportar CSV" @click="exportar('CSV')" />
+        <q-btn
+          no-caps flat icon="description" label="Exportar PDF"
+          :loading="exportandoPdf" @click="exportarPDF"
+        />
+        <q-btn
+          no-caps unelevated color="primary" icon="grid_on" label="Exportar CSV"
+          :loading="exportandoCsv" @click="exportarCSV"
+        />
       </div>
     </div>
 
@@ -21,7 +27,7 @@
           <div class="text-subtitle2 text-weight-medium q-mb-md">Unidades movimentadas (histórico)</div>
 
           <div class="chart-bars">
-            <div v-for="mes in movimentacaoMensal" :key="mes.mes" class="chart-col">
+            <div v-for="mes in estoque.movimentacaoMensal" :key="mes.mes" class="chart-col">
               <div class="chart-bar-group">
                 <div
                   class="chart-bar"
@@ -65,7 +71,7 @@
               />
             </svg>
             <div class="donut-center">
-              <div class="text-h5 text-weight-medium font-mono">{{ (categorias || []).length }}</div>
+              <div class="text-h5 text-weight-medium font-mono">{{ estoque.categorias.length }}</div>
               <div class="v-label" style="font-size: 10px;">Categorias</div>
             </div>
           </div>
@@ -86,27 +92,30 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
 import { useEstoque } from 'src/composables/useEstoque'
 
 const $q = useQuasar()
-const {
-  movimentacaoMensal,
-  movimentacoes,
-  categorias,
-  componentes,
-  carregarTudo
-} = useEstoque()
+
+// IMPORTANTE: nunca desestruture propriedades de useEstoque() — isso quebra
+// a reatividade, porque o retorno é um objeto reactive(). Sempre acesse via
+// "estoque.algumacoisa".
+const estoque = useEstoque()
 
 onMounted(() => {
-  if (typeof carregarTudo === 'function') carregarTudo()
+  estoque.carregarTudo()
 })
+
+const exportandoPdf = ref(false)
+const exportandoCsv = ref(false)
 
 const cores = ['#FF5A1F', '#F2A93B', '#E63946', '#4CAF7D', '#6E8FA8', '#B98CD9']
 
 const maiorValor = computed(() => {
-  const lista = movimentacaoMensal.value || []
+  const lista = estoque.movimentacaoMensal || []
   const valores = lista.map((m) => (m.entradas || 0) + (m.saidas || 0))
   return valores.length ? Math.max(...valores, 1) : 1
 })
@@ -117,7 +126,7 @@ function barHeight (valor) {
 
 const maisRequisitados = computed(() => {
   const totais = {}
-  const lista = movimentacoes.value || []
+  const lista = estoque.movimentacoes || []
   lista
     .filter((m) => m.tipo === 'saida')
     .forEach((m) => {
@@ -130,8 +139,8 @@ const maisRequisitados = computed(() => {
 const circunferencia = 2 * Math.PI * 50
 
 const segmentosDonut = computed(() => {
-  const cats = categorias.value || []
-  const comps = componentes.value || []
+  const cats = estoque.categorias || []
+  const comps = estoque.componentes || []
 
   const totalPorCategoria = cats.map((cat) => ({
     categoria: cat.nome,
@@ -147,7 +156,7 @@ const segmentosDonut = computed(() => {
     const comprimento = (c.qtd / total) * circunferencia
     const offset = -acumulado
     acumulado += comprimento
-    return { categoria: c.categoria, percentual, comprimento, offset, cor: cores[i % cores.length] }
+    return { categoria: c.categoria, qtd: c.qtd, percentual, comprimento, offset, cor: cores[i % cores.length] }
   })
 })
 
@@ -155,12 +164,135 @@ function format (n) {
   return new Intl.NumberFormat('pt-BR').format(n || 0)
 }
 
-function exportar (tipo) {
-  $q.notify({
-    message: `Exportação em ${tipo} iniciada.`,
-    color: 'primary',
-    icon: 'download'
-  })
+function dataHojeIso () {
+  return new Date().toISOString().slice(0, 10)
+}
+
+// ---------------------------------------------------------------------------
+// Exportação CSV — separador ";" e BOM UTF-8, formato que o Excel em
+// português abre corretamente (com acentos) sem precisar importar manualmente.
+// ---------------------------------------------------------------------------
+function escaparCSV (valor) {
+  const texto = String(valor ?? '')
+  if (texto.includes(';') || texto.includes('"') || texto.includes('\n')) {
+    return `"${texto.replace(/"/g, '""')}"`
+  }
+  return texto
+}
+
+function paraCSV (linhas, colunas) {
+  const cabecalho = colunas.map((c) => c.label).join(';')
+  const corpo = linhas
+    .map((linha) => colunas.map((c) => escaparCSV(linha[c.field])).join(';'))
+    .join('\n')
+  return `${cabecalho}\n${corpo}`
+}
+
+function baixarArquivo (conteudo, nomeArquivo, tipoMime) {
+  const blob = new Blob([conteudo], { type: tipoMime })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = nomeArquivo
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+}
+
+async function exportarCSV () {
+  exportandoCsv.value = true
+
+  try {
+    await estoque.carregarMovimentacoesLista(1000)
+
+    const colunas = [
+      { label: 'Data', field: 'data' },
+      { label: 'Tipo', field: 'tipoLabel' },
+      { label: 'Código', field: 'codigo' },
+      { label: 'Componente', field: 'nome' },
+      { label: 'Categoria', field: 'categoria' },
+      { label: 'Quantidade', field: 'qtd' },
+      { label: 'OS / Observações', field: 'referencia' }
+    ]
+
+    const linhas = (estoque.movimentacoesLista || []).map((m) => ({
+      ...m,
+      tipoLabel: m.tipo === 'entrada' ? 'Entrada' : 'Saída',
+      referencia: m.tipo === 'saida' ? m.os : (m.observacoes || '')
+    }))
+
+    if (!linhas.length) {
+      $q.notify({ message: 'Não há movimentações para exportar.', color: 'warning', icon: 'info' })
+      return
+    }
+
+    const csv = '\uFEFF' + paraCSV(linhas, colunas)
+    baixarArquivo(csv, `vulcano-movimentacoes-${dataHojeIso()}.csv`, 'text/csv;charset=utf-8;')
+
+    $q.notify({ message: 'CSV exportado com sucesso.', color: 'positive', icon: 'check_circle' })
+  } catch (e) {
+    $q.notify({ message: 'Não foi possível exportar o CSV.', color: 'negative', icon: 'error_outline' })
+  } finally {
+    exportandoCsv.value = false
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Exportação PDF — resumo (categorias + mais requisitados) em uma folha,
+// gerado inteiramente no navegador via jsPDF, sem precisar de backend.
+// ---------------------------------------------------------------------------
+async function exportarPDF () {
+  exportandoPdf.value = true
+
+  try {
+    await Promise.all([estoque.carregarCategorias(), estoque.carregarComponentes()])
+
+    const doc = new jsPDF()
+    const geradoEm = new Date().toLocaleString('pt-BR')
+
+    doc.setFontSize(18)
+    doc.setTextColor(30, 30, 30)
+    doc.text('Vulcano — Relatório de Estoque', 14, 18)
+
+    doc.setFontSize(10)
+    doc.setTextColor(120, 120, 120)
+    doc.text(`Gerado em ${geradoEm}`, 14, 25)
+
+    doc.setFontSize(11)
+    doc.setTextColor(30, 30, 30)
+    doc.text(`Total de componentes cadastrados: ${estoque.componentes.length}`, 14, 34)
+    doc.text(`Total de categorias: ${estoque.categorias.length}`, 14, 40)
+
+    autoTable(doc, {
+      startY: 48,
+      head: [['Categoria', 'Quantidade em estoque', '% do total']],
+      body: segmentosDonut.value.map((s) => [s.categoria, format(s.qtd), `${s.percentual}%`]),
+      headStyles: { fillColor: [255, 90, 31] },
+      styles: { fontSize: 10 }
+    })
+
+    const proximaY = doc.lastAutoTable ? doc.lastAutoTable.finalY + 12 : 100
+
+    doc.setFontSize(13)
+    doc.text('Componentes mais requisitados (últimas saídas)', 14, proximaY)
+
+    autoTable(doc, {
+      startY: proximaY + 4,
+      head: [['Código', 'Componente', 'Total retirado']],
+      body: maisRequisitados.value.map((m) => [m.codigo, m.nome, `${format(m.total)} un`]),
+      headStyles: { fillColor: [255, 90, 31] },
+      styles: { fontSize: 10 }
+    })
+
+    doc.save(`vulcano-relatorio-${dataHojeIso()}.pdf`)
+
+    $q.notify({ message: 'PDF exportado com sucesso.', color: 'positive', icon: 'check_circle' })
+  } catch (e) {
+    $q.notify({ message: 'Não foi possível exportar o PDF.', color: 'negative', icon: 'error_outline' })
+  } finally {
+    exportandoPdf.value = false
+  }
 }
 </script>
 

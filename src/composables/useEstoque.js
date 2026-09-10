@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { supabase } from 'boot/supabase'
 import { useAuth } from './useAuth'
 
@@ -6,7 +6,9 @@ const componentes = ref([])
 const categorias = ref([])
 const movimentacoes = ref([])
 const movimentacaoMensal = ref([])
+const movimentacoesLista = ref([])
 const carregando = ref(false)
+const carregandoLista = ref(false)
 const erro = ref('')
 
 let canalRealtime = null
@@ -98,6 +100,68 @@ export function useEstoque () {
       nome: m.componentes?.nome,
       data: formatarData(m.data_movimento)
     }))
+  }
+
+  // Lista completa (não só as 6 mais recentes do dashboard), com categoria
+  // embutida para permitir filtro por tipo/insumo na página de Movimentações.
+  async function carregarMovimentacoesLista (limite = 200) {
+    carregandoLista.value = true
+
+    const { data, error: err } = await supabase
+      .from('movimentacoes')
+      .select(`
+        id, tipo, qtd, os, observacoes, data_movimento, created_at, componente_id,
+        componentes ( codigo, nome, categorias ( nome ) )
+      `)
+      .order('created_at', { ascending: false })
+      .limit(limite)
+
+    carregandoLista.value = false
+
+    if (err) { erro.value = err.message; return }
+
+    movimentacoesLista.value = data.map((m) => ({
+      ...m,
+      codigo: m.componentes?.codigo,
+      nome: m.componentes?.nome,
+      categoria: m.componentes?.categorias?.nome ?? 'Sem categoria',
+      data: formatarData(m.data_movimento)
+    }))
+  }
+
+  // Busca uma movimentação específica (tela de detalhe / link direto).
+  async function buscarMovimentacaoPorId (id) {
+    const { data, error: err } = await supabase
+      .from('movimentacoes')
+      .select(`
+        id, tipo, qtd, os, observacoes, data_movimento, created_at, componente_id, operador_id,
+        componentes ( codigo, nome, local, categorias ( nome ) )
+      `)
+      .eq('id', id)
+      .single()
+
+    if (err) return null
+
+    // operador_id aponta para auth.users, sem FK direta para "perfis" — busca à parte.
+    let operadorNome = null
+    if (data.operador_id) {
+      const { data: perfilOperador } = await supabase
+        .from('perfis')
+        .select('nome')
+        .eq('id', data.operador_id)
+        .single()
+      operadorNome = perfilOperador?.nome ?? null
+    }
+
+    return {
+      ...data,
+      codigo: data.componentes?.codigo,
+      nome: data.componentes?.nome,
+      local: data.componentes?.local,
+      categoria: data.componentes?.categorias?.nome ?? 'Sem categoria',
+      operadorNome,
+      dataFormatada: formatarData(data.data_movimento)
+    }
   }
 
   async function carregarMovimentacaoMensal () {
@@ -199,12 +263,14 @@ export function useEstoque () {
     return { ok: true }
   }
 
-  return {
+  return reactive({
     componentes,
     categorias,
     movimentacoes,
     movimentacaoMensal,
+    movimentacoesLista,
     carregando,
+    carregandoLista,
     erro,
     itensComStatus,
     itensEstoqueBaixo,
@@ -217,11 +283,13 @@ export function useEstoque () {
     carregarComponentes,
     carregarCategorias,
     carregarMovimentacoes,
+    carregarMovimentacoesLista,
+    buscarMovimentacaoPorId,
     carregarMovimentacaoMensal,
     iniciarRealtime,
     registrarEntrada,
     registrarSaida
-  }
+  })
 }
 
 function formatarData (dataIso) {
