@@ -102,15 +102,15 @@ import { useEstoque } from 'src/composables/useEstoque'
 const $q = useQuasar()
 const estoque = useEstoque()
 
-onMounted(() => {
-  estoque.carregarComponentes()
-})
-
 const form = reactive({
   componenteId: null,
   quantidade: null,
-  data: '',
+  data: estoque.hojeBr(),
   observacoes: ''
+})
+
+onMounted(() => {
+  estoque.carregarComponentes()
 })
 
 const opcoesComponentes = computed(() =>
@@ -123,7 +123,7 @@ const opcoesComponentes = computed(() =>
 function limpar () {
   form.componenteId = null
   form.quantidade = null
-  form.data = ''
+  form.data = estoque.hojeBr()
   form.observacoes = ''
 }
 

@@ -142,15 +142,15 @@ const $q = useQuasar()
 const estoque = useEstoque()
 const { perfil, sessao } = useAuth()
 
-onMounted(() => {
-  estoque.carregarComponentes()
-})
-
 const form = reactive({
   componenteId: null,
   quantidade: null,
   os: '',
-  data: ''
+  data: estoque.hojeBr()
+})
+
+onMounted(() => {
+  estoque.carregarComponentes()
 })
 
 const opcoesComponentes = computed(() =>
@@ -175,7 +175,7 @@ function limpar () {
   form.componenteId = null
   form.quantidade = null
   form.os = ''
-  form.data = ''
+  form.data = estoque.hojeBr()
 }
 
 async function confirmar () {
