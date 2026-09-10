@@ -96,17 +96,16 @@
 
 <script setup>
 import { reactive, computed, onMounted } from 'vue'
+import { useQuasar } from 'quasar'
 import { useEstoque } from 'src/composables/useEstoque'
 
-import { useQuasar } from 'quasar'
-
-const { componentes, carregarComponentes, registrarEntrada } = useEstoque()
 const $q = useQuasar()
 const estoque = useEstoque()
 
 onMounted(() => {
-  carregarComponentes()
+  estoque.carregarComponentes()
 })
+
 const form = reactive({
   componenteId: null,
   quantidade: null,
@@ -115,7 +114,7 @@ const form = reactive({
 })
 
 const opcoesComponentes = computed(() =>
-  (componentes.value || []).map((c) => ({
+  (estoque.componentes || []).map((c) => ({
     label: `${c.codigo} - ${c.nome}`,
     value: c.id
   }))

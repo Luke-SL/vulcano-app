@@ -24,6 +24,16 @@ function traduzirErroEstoque (error) {
   return error?.message || 'Não foi possível concluir a operação.'
 }
 
+function formatarData (dataIso) {
+  if (!dataIso) return '—'
+  const hoje = new Date().toISOString().slice(0, 10)
+  const ontem = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
+
+  if (dataIso === hoje) return 'Hoje'
+  if (dataIso === ontem) return 'Ontem'
+  return new Date(dataIso + 'T00:00:00').toLocaleDateString('pt-BR')
+}
+
 export function useEstoque () {
   const { sessao } = useAuth()
 
@@ -40,7 +50,7 @@ export function useEstoque () {
   )
 
   const totalUnidades = computed(() =>
-    componentes.value.reduce((soma, c) => soma + c.qtd, 0)
+    componentes.value.reduce((soma, c) => soma + (c.qtd || 0), 0)
   )
 
   const movimentacoesRecentes = computed(() => movimentacoes.value.slice(0, 6))
@@ -48,13 +58,13 @@ export function useEstoque () {
   const entradasHoje = computed(() =>
     movimentacoes.value
       .filter((m) => m.tipo === 'entrada' && m.data === 'Hoje')
-      .reduce((soma, m) => soma + m.qtd, 0)
+      .reduce((soma, m) => soma + (m.qtd || 0), 0)
   )
 
   const saidasHoje = computed(() =>
     movimentacoes.value
       .filter((m) => m.tipo === 'saida' && m.data === 'Hoje')
-      .reduce((soma, m) => soma + m.qtd, 0)
+      .reduce((soma, m) => soma + (m.qtd || 0), 0)
   )
 
   async function carregarCategorias () {
@@ -64,7 +74,7 @@ export function useEstoque () {
       .order('nome')
 
     if (err) { erro.value = err.message; return }
-    categorias.value = data
+    categorias.value = data || []
   }
 
   async function carregarComponentes () {
@@ -79,7 +89,7 @@ export function useEstoque () {
 
     if (err) { erro.value = err.message; return }
 
-    componentes.value = data.map((c) => ({
+    componentes.value = (data || []).map((c) => ({
       ...c,
       categoria: c.categorias?.nome ?? 'Sem categoria'
     }))
@@ -94,7 +104,7 @@ export function useEstoque () {
 
     if (err) { erro.value = err.message; return }
 
-    movimentacoes.value = data.map((m) => ({
+    movimentacoes.value = (data || []).map((m) => ({
       ...m,
       codigo: m.componentes?.codigo,
       nome: m.componentes?.nome,
@@ -102,8 +112,6 @@ export function useEstoque () {
     }))
   }
 
-  // Lista completa (não só as 6 mais recentes do dashboard), com categoria
-  // embutida para permitir filtro por tipo/insumo na página de Movimentações.
   async function carregarMovimentacoesLista (limite = 200) {
     carregandoLista.value = true
 
@@ -120,7 +128,7 @@ export function useEstoque () {
 
     if (err) { erro.value = err.message; return }
 
-    movimentacoesLista.value = data.map((m) => ({
+    movimentacoesLista.value = (data || []).map((m) => ({
       ...m,
       codigo: m.componentes?.codigo,
       nome: m.componentes?.nome,
@@ -129,7 +137,6 @@ export function useEstoque () {
     }))
   }
 
-  // Busca uma movimentação específica (tela de detalhe / link direto).
   async function buscarMovimentacaoPorId (id) {
     const { data, error: err } = await supabase
       .from('movimentacoes')
@@ -140,9 +147,8 @@ export function useEstoque () {
       .eq('id', id)
       .single()
 
-    if (err) return null
+    if (err || !data) return null
 
-    // operador_id aponta para auth.users, sem FK direta para "perfis" — busca à parte.
     let operadorNome = null
     if (data.operador_id) {
       const { data: perfilOperador } = await supabase
@@ -189,12 +195,13 @@ export function useEstoque () {
       })
     }
 
-    data.forEach((m) => {
+    (data || []).forEach((m) => {
+      if (!m.data_movimento) return
       const chave = m.data_movimento.slice(0, 7)
       const balde = baldes.find((b) => b.chave === chave)
       if (!balde) return
-      if (m.tipo === 'entrada') balde.entradas += m.qtd
-      else balde.saidas += m.qtd
+      if (m.tipo === 'entrada') balde.entradas += (m.qtd || 0)
+      else balde.saidas += (m.qtd || 0)
     })
 
     movimentacaoMensal.value = baldes
@@ -290,13 +297,4 @@ export function useEstoque () {
     registrarEntrada,
     registrarSaida
   })
-}
-
-function formatarData (dataIso) {
-  const hoje = new Date().toISOString().slice(0, 10)
-  const ontem = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
-
-  if (dataIso === hoje) return 'Hoje'
-  if (dataIso === ontem) return 'Ontem'
-  return new Date(dataIso + 'T00:00:00').toLocaleDateString('pt-BR')
 }

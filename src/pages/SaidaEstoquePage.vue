@@ -139,11 +139,11 @@ import { useEstoque } from 'src/composables/useEstoque'
 import { useAuth } from 'src/composables/useAuth'
 
 const $q = useQuasar()
-const { componentes, carregarComponentes, registrarSaida } = useEstoque()
+const estoque = useEstoque()
 const { perfil, sessao } = useAuth()
 
 onMounted(() => {
-  carregarComponentes()
+  estoque.carregarComponentes()
 })
 
 const form = reactive({
@@ -154,11 +154,11 @@ const form = reactive({
 })
 
 const opcoesComponentes = computed(() =>
-  (componentes.value || []).map((c) => ({ label: `${c.nome} (${c.codigo})`, value: c.id }))
+  (estoque.componentes || []).map((c) => ({ label: `${c.nome} (${c.codigo})`, value: c.id }))
 )
 
 const itemSelecionado = computed(() =>
-  (componentes.value || []).find((c) => c.id === form.componenteId) || null
+  (estoque.componentes || []).find((c) => c.id === form.componenteId) || null
 )
 
 const projecaoAposBaixa = computed(() => {
@@ -181,7 +181,7 @@ function limpar () {
 async function confirmar () {
   if (!form.componenteId || !form.quantidade || !form.os || quantidadeExcedeEstoque.value) return
 
-  const resultado = await registrarSaida({
+  const resultado = await estoque.registrarSaida({
     componenteId: form.componenteId,
     qtd: form.quantidade,
     os: form.os,
