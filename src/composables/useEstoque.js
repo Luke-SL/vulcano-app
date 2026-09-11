@@ -24,7 +24,6 @@ function traduzirErroEstoque (error) {
   return error?.message || 'Não foi possível concluir a operação.'
 }
 
-// Converte DD/MM/AAAA para YYYY-MM-DD (para enviar ao Supabase)
 export function converterParaIso (dataBr) {
   if (!dataBr || dataBr.length !== 10) return undefined
   const [dia, mes, ano] = dataBr.split('/')
@@ -32,7 +31,6 @@ export function converterParaIso (dataBr) {
   return `${ano}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`
 }
 
-// Converte YYYY-MM-DD para DD/MM/AAAA
 export function isoParaBr (dataIso) {
   if (!dataIso) return ''
   const dataApenas = dataIso.slice(0, 10)
@@ -44,7 +42,6 @@ export function isoParaBr (dataIso) {
   return dataIso
 }
 
-// Retorna a data atual formatada como DD/MM/AAAA
 export function hojeBr () {
   const hoje = new Date()
   const dia = String(hoje.getDate()).padStart(2, '0')
@@ -53,7 +50,6 @@ export function hojeBr () {
   return `${dia}/${mes}/${ano}`
 }
 
-// Formatação amigável ("Hoje", "Ontem" ou "DD/MM/AAAA")
 export function formatarData (dataIso) {
   if (!dataIso) return '—'
   const dataApenas = dataIso.slice(0, 10)
@@ -131,7 +127,7 @@ export function useEstoque () {
   async function carregarMovimentacoes (limite = 20) {
     const { data, error: err } = await supabase
       .from('movimentacoes')
-      .select('id, tipo, qtd, os, observacoes, data_movimento, created_at, componentes ( codigo, nome )')
+      .select('id, tipo, qtd, os, observacoes, data_movimento, is_emprestimo, devolvido, created_at, componentes ( codigo, nome )')
       .order('created_at', { ascending: false })
       .limit(limite)
 
@@ -152,7 +148,7 @@ export function useEstoque () {
     const { data, error: err } = await supabase
       .from('movimentacoes')
       .select(`
-        id, tipo, qtd, os, observacoes, data_movimento, created_at, componente_id,
+        id, tipo, qtd, os, observacoes, data_movimento, is_emprestimo, devolvido, data_devolucao, created_at, componente_id,
         componentes ( codigo, nome, categorias ( nome ) )
       `)
       .order('created_at', { ascending: false })
@@ -168,7 +164,8 @@ export function useEstoque () {
       nome: m.componentes?.nome,
       categoria: m.componentes?.categorias?.nome ?? 'Sem categoria',
       data: formatarData(m.data_movimento),
-      dataBr: isoParaBr(m.data_movimento)
+      dataBr: isoParaBr(m.data_movimento),
+      dataDevolucaoBr: isoParaBr(m.data_devolucao)
     }))
   }
 
@@ -176,7 +173,7 @@ export function useEstoque () {
     const { data, error: err } = await supabase
       .from('movimentacoes')
       .select(`
-        id, tipo, qtd, os, observacoes, data_movimento, created_at, componente_id, operador_id,
+        id, tipo, qtd, os, observacoes, data_movimento, is_emprestimo, devolvido, data_devolucao, created_at, componente_id, operador_id,
         componentes ( codigo, nome, local, categorias ( nome ) )
       `)
       .eq('id', id)
@@ -202,7 +199,8 @@ export function useEstoque () {
       categoria: data.componentes?.categorias?.nome ?? 'Sem categoria',
       operadorNome,
       dataFormatada: formatarData(data.data_movimento),
-      dataBr: isoParaBr(data.data_movimento)
+      dataBr: isoParaBr(data.data_movimento),
+      dataDevolucaoBr: isoParaBr(data.data_devolucao)
     }
   }
 
@@ -292,7 +290,7 @@ export function useEstoque () {
     return { ok: true }
   }
 
-  async function registrarSaida ({ componenteId, qtd, os, data }) {
+  async function registrarSaida ({ componenteId, qtd, os, data, isEmprestimo = false }) {
     const dataFormatada = converterParaIso(data) || new Date().toISOString().slice(0, 10)
 
     const { error: err } = await supabase.from('movimentacoes').insert({
@@ -301,12 +299,65 @@ export function useEstoque () {
       qtd,
       os,
       data_movimento: dataFormatada,
+      is_emprestimo: isEmprestimo,
+      devolvido: false,
       operador_id: sessao.value?.user?.id
     })
 
     if (err) return { ok: false, mensagem: traduzirErroEstoque(err) }
 
     await Promise.all([carregarComponentes(), carregarMovimentacoes(), carregarMovimentacaoMensal()])
+    return { ok: true }
+  }
+
+  async function devolverEmprestimo ({ movimentacaoId, componenteId, qtd }) {
+    // 1. Verifica se a movimentação existe e se já não foi devolvida
+    const { data: movAtual, error: errFetch } = await supabase
+      .from('movimentacoes')
+      .select('devolvido, is_emprestimo')
+      .eq('id', movimentacaoId)
+      .single()
+
+    if (errFetch || !movAtual) return { ok: false, mensagem: 'Movimentação não encontrada.' }
+    if (movAtual.devolvido) return { ok: false, mensagem: 'Este empréstimo já foi devolvido.' }
+    if (!movAtual.is_emprestimo) return { ok: false, mensagem: 'Esta movimentação não é um empréstimo.' }
+
+    // 2. Marcar empréstimo como devolvido no banco
+    const { data: movAtualizada, error: errMov } = await supabase
+      .from('movimentacoes')
+      .update({ devolvido: true, data_devolucao: new Date().toISOString() })
+      .eq('id', movimentacaoId)
+      .eq('devolvido', false)
+      .select()
+
+    if (errMov) return { ok: false, mensagem: errMov.message }
+    if (!movAtualizada || movAtualizada.length === 0) {
+      return { ok: false, mensagem: 'Não foi possível atualizar a movimentação (verifique as permissões de RLS no Supabase).' }
+    }
+
+    // 3. Retornar a quantidade ao estoque do componente
+    const { data: comp, error: errComp } = await supabase
+      .from('componentes')
+      .select('qtd')
+      .eq('id', componenteId)
+      .single()
+
+    if (errComp) return { ok: false, mensagem: errComp.message }
+
+    const novaQtd = (comp?.qtd || 0) + qtd
+    const { error: errUpdate } = await supabase
+      .from('componentes')
+      .update({ qtd: novaQtd, updated_at: new Date().toISOString() })
+      .eq('id', componenteId)
+
+    if (errUpdate) return { ok: false, mensagem: errUpdate.message }
+
+    await Promise.all([
+      carregarComponentes(),
+      carregarMovimentacoes(),
+      carregarMovimentacoesLista()
+    ])
+
     return { ok: true }
   }
 
@@ -339,6 +390,7 @@ export function useEstoque () {
     carregarMovimentacaoMensal,
     iniciarRealtime,
     registrarEntrada,
-    registrarSaida
+    registrarSaida,
+    devolverEmprestimo
   })
 }

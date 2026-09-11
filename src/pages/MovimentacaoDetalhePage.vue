@@ -24,8 +24,12 @@
       <div class="col-12 col-md-8">
         <div class="v-surface q-pa-lg">
           <div class="row items-center justify-between q-mb-lg">
-            <span class="v-chip" :class="mov.tipo === 'entrada' ? 'v-chip--normal' : 'v-chip--critico'" style="font-size: 13px; padding: 6px 14px;">
-              {{ mov.tipo === 'entrada' ? 'Entrada de estoque' : 'Saída de estoque' }}
+            <span
+              class="v-chip"
+              :class="mov.is_emprestimo ? 'v-chip--alerta' : (mov.tipo === 'entrada' ? 'v-chip--normal' : 'v-chip--critico')"
+              style="font-size: 13px; padding: 6px 14px;"
+            >
+              {{ mov.is_emprestimo ? 'Empréstimo de estoque' : (mov.tipo === 'entrada' ? 'Entrada de estoque' : 'Saída de estoque') }}
             </span>
             <div class="v-label">{{ mov.dataFormatada }}</div>
           </div>
@@ -64,7 +68,39 @@
 
           <q-separator style="background: var(--v-border);" class="q-my-lg" />
 
-          <template v-if="mov.tipo === 'saida'">
+          <template v-if="mov.is_emprestimo">
+            <div class="row q-col-gutter-lg">
+              <div class="col-6 col-sm-4">
+                <div class="v-label">Número da OS</div>
+                <div class="text-h6 text-weight-medium font-mono q-mt-xs" style="color: var(--v-magma);">
+                  {{ mov.os }}
+                </div>
+              </div>
+
+              <div class="col-6 col-sm-4">
+                <div class="v-label">Status do empréstimo</div>
+                <div class="q-mt-xs">
+                  <q-chip
+                    dense
+                    size="md"
+                    class="q-ma-none"
+                    :color="mov.devolvido ? 'positive' : 'warning'"
+                    :text-color="mov.devolvido ? 'white' : 'black'"
+                    :icon="mov.devolvido ? 'check_circle' : 'schedule'"
+                  >
+                    {{ mov.devolvido ? 'Devolvido' : 'Em uso' }}
+                  </q-chip>
+                </div>
+              </div>
+
+              <div v-if="mov.devolvido" class="col-6 col-sm-4">
+                <div class="v-label">Data de devolução</div>
+                <div class="text-h6 text-weight-medium q-mt-xs">{{ mov.dataDevolucaoBr || '—' }}</div>
+              </div>
+            </div>
+          </template>
+
+          <template v-else-if="mov.tipo === 'saida'">
             <div class="v-label">Número da OS</div>
             <div class="text-h6 text-weight-medium font-mono q-mt-xs" style="color: var(--v-magma);">
               {{ mov.os }}
@@ -84,6 +120,17 @@
         <div class="v-surface q-pa-lg">
           <div class="text-subtitle2 text-weight-medium q-mb-md">Ações</div>
           <div class="column" style="gap: 10px;">
+            <q-btn
+              v-if="mov.is_emprestimo && !mov.devolvido"
+              no-caps
+              unelevated
+              color="positive"
+              icon="replay"
+              label="Marcar como devolvido"
+              :loading="devolvendo"
+              @click="confirmarDevolucao"
+            />
+
             <q-btn
               no-caps
               flat
@@ -110,29 +157,81 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useEstoque } from '/src/composables/useEstoque'
+import { useQuasar } from 'quasar'
+import { useEstoque } from 'src/composables/useEstoque'
 
 const props = defineProps({
   id: { type: String, required: true }
 })
 
+const $q = useQuasar()
 const estoque = useEstoque()
 const router = useRouter()
 
 const mov = ref(null)
 const carregando = ref(true)
+const devolvendo = ref(false)
 
-onMounted(async () => {
+async function carregar () {
   carregando.value = true
   mov.value = await estoque.buscarMovimentacaoPorId(props.id)
   carregando.value = false
+}
+
+onMounted(() => {
+  carregar()
 })
 
 function irParaCatalogo () {
   router.push({ path: '/catalogo', query: { busca: mov.value?.codigo } })
 }
 
+function confirmarDevolucao () {
+  $q.dialog({
+    title: 'Confirmar devolução',
+    message: `Confirma o retorno de ${mov.value.qtd} un do componente "${mov.value.nomeComponente}" ao estoque?`,
+    cancel: true,
+    persistent: true,
+    dark: true
+  }).onOk(async () => {
+    devolvendo.value = true
+    const res = await estoque.devolverEmprestimo({
+      movimentacaoId: mov.value.id,
+      componenteId: mov.value.componente_id,
+      qtd: mov.value.qtd
+    })
+    devolvendo.value = false
+
+    if (res.ok) {
+      // Atualiza o estado reativo local imediatamente
+      mov.value.devolvido = true
+      mov.value.dataDevolucaoBr = estoque.hojeBr()
+
+      $q.notify({
+        message: 'Devolução registrada com sucesso!',
+        color: 'positive',
+        icon: 'check_circle'
+      })
+      await carregar()
+    } else {
+      $q.notify({
+        message: res.mensagem || 'Erro ao registrar devolução.',
+        color: 'negative',
+        icon: 'error'
+      })
+    }
+  })
+}
+
 function format (n) {
-  return new Intl.NumberFormat('pt-BR').format(n)
+  return new Intl.NumberFormat('pt-BR').format(n || 0)
 }
 </script>
+
+<style scoped>
+.v-chip--alerta {
+  background: rgba(242, 169, 59, 0.15);
+  color: #f2a93b;
+  border: 1px solid rgba(242, 169, 59, 0.3);
+}
+</style>

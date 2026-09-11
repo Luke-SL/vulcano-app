@@ -3,7 +3,7 @@
     <div class="q-mb-lg">
       <div class="text-h5 text-weight-medium">Saída de estoque</div>
       <div class="text-body2 q-mt-xs" style="color: var(--v-text-muted);">
-        Registre a retirada de componentes para projetos e prototipagem ativa.
+        Registre a retirada de componentes para projetos, requisições ou empréstimos.
       </div>
     </div>
 
@@ -57,7 +57,7 @@
               </div>
             </div>
 
-            <div class="row q-col-gutter-md">
+            <div class="row q-col-gutter-md items-center">
               <div class="col-12 col-sm-6">
                 <q-input
                   v-model="form.data"
@@ -69,14 +69,13 @@
                   placeholder="DD/MM/AAAA"
                 />
               </div>
-              <div class="col-12 col-sm-6 flex items-center">
-                <div class="text-caption" style="color: var(--v-text-muted);">
-                  Operador responsável:
-                  <span class="text-weight-medium" style="color: var(--v-text);">
-                    {{ perfil?.nome || sessao?.user?.email || '—' }}
-                  </span>
-                  <div style="font-size: 11px;">(identificado pela sua sessão)</div>
-                </div>
+              <div class="col-12 col-sm-6">
+                <q-checkbox
+                  v-model="form.isEmprestimo"
+                  label="Item em empréstimo (retornável)"
+                  dark
+                  color="warning"
+                />
               </div>
             </div>
 
@@ -136,17 +135,16 @@
 import { reactive, computed, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
 import { useEstoque } from 'src/composables/useEstoque'
-import { useAuth } from 'src/composables/useAuth'
 
 const $q = useQuasar()
 const estoque = useEstoque()
-const { perfil, sessao } = useAuth()
 
 const form = reactive({
   componenteId: null,
   quantidade: null,
   os: '',
-  data: estoque.hojeBr()
+  data: estoque.hojeBr(),
+  isEmprestimo: false
 })
 
 onMounted(() => {
@@ -176,6 +174,7 @@ function limpar () {
   form.quantidade = null
   form.os = ''
   form.data = estoque.hojeBr()
+  form.isEmprestimo = false
 }
 
 async function confirmar () {
@@ -185,7 +184,8 @@ async function confirmar () {
     componenteId: form.componenteId,
     qtd: form.quantidade,
     os: form.os,
-    data: form.data
+    data: form.data,
+    isEmprestimo: form.isEmprestimo
   })
 
   if (!resultado.ok) {
@@ -194,8 +194,10 @@ async function confirmar () {
   }
 
   $q.notify({
-    message: `Saída registrada para a OS ${form.os}.`,
-    color: 'negative',
+    message: form.isEmprestimo
+      ? `Empréstimo registrado com sucesso para a OS ${form.os}.`
+      : `Saída registrada para a OS ${form.os}.`,
+    color: form.isEmprestimo ? 'warning' : 'negative',
     icon: 'check_circle'
   })
 
