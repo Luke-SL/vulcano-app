@@ -71,13 +71,6 @@
           <template v-if="mov.is_emprestimo">
             <div class="row q-col-gutter-lg">
               <div class="col-6 col-sm-4">
-                <div class="v-label">Número da OS</div>
-                <div class="text-h6 text-weight-medium font-mono q-mt-xs" style="color: var(--v-magma);">
-                  {{ mov.os }}
-                </div>
-              </div>
-
-              <div class="col-6 col-sm-4">
                 <div class="v-label">Status do empréstimo</div>
                 <div class="q-mt-xs">
                   <q-chip
@@ -97,13 +90,6 @@
                 <div class="v-label">Data de devolução</div>
                 <div class="text-h6 text-weight-medium q-mt-xs">{{ mov.dataDevolucaoBr || '—' }}</div>
               </div>
-            </div>
-          </template>
-
-          <template v-else-if="mov.tipo === 'saida'">
-            <div class="v-label">Número da OS</div>
-            <div class="text-h6 text-weight-medium font-mono q-mt-xs" style="color: var(--v-magma);">
-              {{ mov.os }}
             </div>
           </template>
 
@@ -203,7 +189,6 @@ function confirmarDevolucao () {
     devolvendo.value = false
 
     if (res.ok) {
-      // Atualiza o estado reativo local imediatamente
       mov.value.devolvido = true
       mov.value.dataDevolucaoBr = estoque.hojeBr()
 

@@ -290,14 +290,14 @@ export function useEstoque () {
     return { ok: true }
   }
 
-  async function registrarSaida ({ componenteId, qtd, os, data, isEmprestimo = false }) {
+  async function registrarSaida ({ componenteId, qtd, observacoes, data, isEmprestimo = false }) {
     const dataFormatada = converterParaIso(data) || new Date().toISOString().slice(0, 10)
 
     const { error: err } = await supabase.from('movimentacoes').insert({
       componente_id: componenteId,
       tipo: 'saida',
       qtd,
-      os,
+      observacoes: observacoes || null,
       data_movimento: dataFormatada,
       is_emprestimo: isEmprestimo,
       devolvido: false,

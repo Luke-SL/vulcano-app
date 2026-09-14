@@ -59,7 +59,7 @@
               dark
               dense
               type="textarea"
-              rows="4"
+              rows="3"
               label="Observações / Notas"
             />
 
@@ -73,20 +73,31 @@
 
       <div class="col-12 col-md-4">
         <div class="v-surface q-pa-lg full-height">
-          <div class="text-subtitle2 text-weight-medium q-mb-md">Instruções técnicas</div>
-          <div class="text-body2 q-mb-md" style="color: var(--v-text-muted);">
-            Certifique-se de validar fisicamente o lote de componentes antes de confirmar no sistema.
-          </div>
-          <div class="text-body2 q-mb-md" style="color: var(--v-text-muted);">
-            Para circuitos integrados sensíveis, execute o protocolo ESD apropriado antes de armazenar na prateleira.
-          </div>
-          <div class="text-body2 q-mb-lg" style="color: var(--v-text-muted);">
-            Qualquer divergência física de quantidade deve ser reportada no campo de observações.
-          </div>
+          <div class="text-subtitle2 text-weight-medium q-mb-md">Estado do estoque atual</div>
 
-          <div class="destaque-box">
-            <q-icon name="verified_user" size="16px" style="color: var(--v-verde);" />
-            Certificação de qualidade ativa
+          <template v-if="itemSelecionado">
+            <div class="v-label">Quantidade atual em disco</div>
+            <div class="text-h4 text-weight-medium font-mono q-mb-md" style="color: var(--v-magma);">
+              {{ format(itemSelecionado.qtd) }} un
+            </div>
+
+            <q-separator style="background: var(--v-border);" class="q-mb-md" />
+
+            <div class="v-label">Estoque mínimo advertido</div>
+            <div class="text-h6 text-weight-medium font-mono q-mb-md">
+              {{ format(itemSelecionado.minimo) }} un
+            </div>
+
+            <q-separator style="background: var(--v-border);" class="q-mb-md" />
+
+            <div class="v-label">Projeção após entrada</div>
+            <div class="text-h6 text-weight-medium font-mono text-positive">
+              {{ format(projecaoAposEntrada) }} un
+            </div>
+          </template>
+
+          <div v-else class="text-body2" style="color: var(--v-text-muted);">
+            Selecione um componente para ver o estado atual do estoque.
           </div>
         </div>
       </div>
@@ -115,10 +126,20 @@ onMounted(() => {
 
 const opcoesComponentes = computed(() =>
   (estoque.componentes || []).map((c) => ({
-    label: `${c.codigo} - ${c.nome}`,
+    label: `${c.nome} (${c.codigo})`,
     value: c.id
   }))
 )
+
+const itemSelecionado = computed(() =>
+  (estoque.componentes || []).find((c) => c.id === form.componenteId) || null
+)
+
+const projecaoAposEntrada = computed(() => {
+  if (!itemSelecionado.value) return 0
+  const qtd = form.quantidade || 0
+  return itemSelecionado.value.qtd + qtd
+})
 
 function limpar () {
   form.componenteId = null
@@ -150,18 +171,17 @@ async function confirmar () {
 
   limpar()
 }
+
+function format (n) {
+  return new Intl.NumberFormat('pt-BR').format(n || 0)
+}
 </script>
 
 <style scoped>
-.destaque-box {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--v-verde);
-  background: var(--v-verde-dim);
-  border: 1px solid rgba(76, 175, 125, 0.3);
-  border-radius: 8px;
-  padding: 10px 12px;
+.v-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--v-text-muted);
 }
 </style>

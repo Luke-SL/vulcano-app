@@ -46,20 +46,6 @@
               </div>
               <div class="col-12 col-sm-6">
                 <q-input
-                  v-model="form.os"
-                  filled
-                  dark
-                  dense
-                  label="Número da OS"
-                  placeholder="OS-2026-0000"
-                  :rules="[(v) => !!v || 'Informe o número da OS']"
-                />
-              </div>
-            </div>
-
-            <div class="row q-col-gutter-md items-center">
-              <div class="col-12 col-sm-6">
-                <q-input
                   v-model="form.data"
                   filled
                   dark
@@ -69,7 +55,20 @@
                   placeholder="DD/MM/AAAA"
                 />
               </div>
-              <div class="col-12 col-sm-6">
+            </div>
+
+            <q-input
+              v-model="form.observacoes"
+              filled
+              dark
+              dense
+              type="textarea"
+              rows="3"
+              label="Observações / Notas"
+            />
+
+            <div class="row items-center">
+              <div class="col-12">
                 <q-checkbox
                   v-model="form.isEmprestimo"
                   label="Item em empréstimo (retornável)"
@@ -142,8 +141,8 @@ const estoque = useEstoque()
 const form = reactive({
   componenteId: null,
   quantidade: null,
-  os: '',
   data: estoque.hojeBr(),
+  observacoes: '',
   isEmprestimo: false
 })
 
@@ -172,19 +171,19 @@ const quantidadeExcedeEstoque = computed(() =>
 function limpar () {
   form.componenteId = null
   form.quantidade = null
-  form.os = ''
   form.data = estoque.hojeBr()
+  form.observacoes = ''
   form.isEmprestimo = false
 }
 
 async function confirmar () {
-  if (!form.componenteId || !form.quantidade || !form.os || quantidadeExcedeEstoque.value) return
+  if (!form.componenteId || !form.quantidade || quantidadeExcedeEstoque.value) return
 
   const resultado = await estoque.registrarSaida({
     componenteId: form.componenteId,
     qtd: form.quantidade,
-    os: form.os,
     data: form.data,
+    observacoes: form.observacoes,
     isEmprestimo: form.isEmprestimo
   })
 
@@ -195,8 +194,8 @@ async function confirmar () {
 
   $q.notify({
     message: form.isEmprestimo
-      ? `Empréstimo registrado com sucesso para a OS ${form.os}.`
-      : `Saída registrada para a OS ${form.os}.`,
+      ? 'Empréstimo registrado com sucesso.'
+      : 'Saída registrada com sucesso.',
     color: form.isEmprestimo ? 'warning' : 'negative',
     icon: 'check_circle'
   })

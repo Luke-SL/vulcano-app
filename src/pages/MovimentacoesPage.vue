@@ -84,7 +84,6 @@
         <template #body-cell-referencia="props">
           <q-td :props="props">
             <template v-if="props.row.is_emprestimo">
-              <span class="font-mono q-mr-xs" style="font-size: 12px;">{{ props.row.os }}</span>
               <q-chip
                 dense
                 size="sm"
@@ -95,9 +94,6 @@
                 {{ props.row.devolvido ? 'Devolvido' : 'Em uso' }}
               </q-chip>
             </template>
-            <span v-else-if="props.row.tipo === 'saida'" class="font-mono" style="font-size: 12px;">
-              {{ props.row.os }}
-            </span>
             <span v-else class="text-body2 ellipsis" style="color: var(--v-text-muted); max-width: 220px; display: inline-block;">
               {{ props.row.observacoes || '—' }}
             </span>
@@ -151,7 +147,7 @@ const colunas = [
   { name: 'nomeComponente', label: 'Componente', field: 'nomeComponente', align: 'left' },
   { name: 'categoria', label: 'Categoria', field: 'categoria', align: 'left' },
   { name: 'qtd', label: 'Qtd', field: 'qtd', align: 'right' },
-  { name: 'referencia', label: 'OS / Status', field: 'referencia', align: 'left' },
+  { name: 'referencia', label: 'Status / Observações', field: 'referencia', align: 'left' },
   { name: 'acoes', label: '', field: 'id', align: 'right' }
 ]
 
